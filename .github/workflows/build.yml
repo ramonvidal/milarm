@@ -50,7 +50,7 @@ jobs:
       # each time. GitHub's fixed link always serves the newest one:
       # https://github.com/ramonvidal/milarm/releases/latest/download/Milarm.apk
       - name: Publish a release
-        if: github.event_name == 'push' && github.ref_name == 'main'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
