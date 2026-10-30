@@ -1,0 +1,10 @@
+<script>
+export default {
+  onCreate() {
+    console.info('Counter app created')
+  },
+  onDestroy() {
+    console.info('Counter app destroyed')
+  }
+}
+</script>
