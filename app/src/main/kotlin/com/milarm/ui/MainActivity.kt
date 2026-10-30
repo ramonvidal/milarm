@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -16,12 +17,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.milarm.core.Alarm
 import com.milarm.milarm
+import com.milarm.update.UpdateViewModel
 import java.time.Duration
 import java.time.ZonedDateTime
 
 class MainActivity : ComponentActivity() {
     /** Bumped on resume so permission state is re-read after returning from settings. */
     private val resumeTick = mutableIntStateOf(0)
+    private val updates: UpdateViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +47,11 @@ class MainActivity : ComponentActivity() {
                 if (current == null) {
                     AlarmListScreen(
                         alarms = alarms,
+                        updateBanner = { UpdateBanner(updates) },
+                        version = updates.installedVersion,
+                        onCheckUpdates = {
+                            updates.checkNow { Toast.makeText(this, it, Toast.LENGTH_SHORT).show() }
+                        },
                         missingPermissions = missing,
                         onGrant = { permission ->
                             when (permission) {
@@ -78,6 +86,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         resumeTick.intValue++
+        updates.onResume()
     }
 
     private fun save(alarm: Alarm) {

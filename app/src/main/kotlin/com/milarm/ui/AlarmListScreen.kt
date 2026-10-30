@@ -12,11 +12,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -24,6 +28,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -39,14 +47,37 @@ import java.util.Locale
 @Composable
 fun AlarmListScreen(
     alarms: List<Alarm>,
+    updateBanner: @Composable () -> Unit,
+    version: String,
+    onCheckUpdates: () -> Unit,
     missingPermissions: List<MissingPermission>,
     onGrant: (MissingPermission) -> Unit,
     onAdd: () -> Unit,
     onEdit: (Alarm) -> Unit,
     onToggle: (Alarm, Boolean) -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Milarm") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Milarm") },
+                actions = {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(Icons.Filled.MoreVert, contentDescription = "More")
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Check for updates") },
+                            onClick = {
+                                menuOpen = false
+                                onCheckUpdates()
+                            },
+                        )
+                        DropdownMenuItem(text = { Text("Version $version") }, onClick = {}, enabled = false)
+                    }
+                },
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAdd) { Icon(Icons.Filled.Add, contentDescription = "Add alarm") }
         },
@@ -56,6 +87,7 @@ fun AlarmListScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item(key = "update") { updateBanner() }
             items(missingPermissions, key = { it.title }) { PermissionCard(it, onGrant) }
             if (alarms.isEmpty()) {
                 item { Text("No alarms yet. Tap + to add one.", style = MaterialTheme.typography.bodyLarge) }

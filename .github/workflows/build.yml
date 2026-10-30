@@ -8,6 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # Publishing the APK as a release.
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -18,13 +22,47 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # The fixed signing key: without it every build would get a new random key and Android would
+      # refuse to update over the installed app (reinstalling would wipe the alarms).
+      - name: Add the signing key
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
+            printf '%s' "$SIGNING_KEYSTORE_BASE64" | base64 -d > app/milarm-release.keystore
+            echo "Signing key added"
+          else
+            echo "::warning::SIGNING_KEYSTORE_BASE64 is not set: builds use a throwaway key and no release is published."
+          fi
+
       - name: Unit tests
         run: ./gradlew test
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug
+      - name: Build APKs
+        run: ./gradlew assembleDebug assembleRelease
 
       - uses: actions/upload-artifact@v4
         with:
           name: milarm-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      # One release per build, tagged v0.<build>, so the app's update button sees a new version
+      # each time. GitHub's fixed link always serves the newest one:
+      # https://github.com/ramonvidal/milarm/releases/latest/download/Milarm.apk
+      - name: Publish a release
+        if: github.event_name == 'push' && github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f app/milarm-release.keystore ]; then
+            echo "::warning::Not publishing: the SIGNING_KEYSTORE_BASE64 secret is missing, so this APK couldn't update an installed copy."
+            exit 0
+          fi
+          cp app/build/outputs/apk/release/app-release.apk Milarm.apk
+          gh release create "v0.${GITHUB_RUN_NUMBER}" Milarm.apk \
+            --target "$GITHUB_SHA" \
+            --title "Milarm 0.${GITHUB_RUN_NUMBER}" \
+            --notes "Build ${GITHUB_RUN_NUMBER} from ${GITHUB_SHA::7}. Install Milarm.apk on Android; it updates over any earlier Milarm release." \
+            --latest
+          # Keep the three newest releases.
+          gh release list --limit 100 --json tagName --jq '.[3:][].tagName' | xargs -r -n1 gh release delete --cleanup-tag --yes

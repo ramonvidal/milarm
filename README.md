@@ -38,10 +38,27 @@ on the phone settles it.
 
 ## Install
 
-Download the APK from the latest **Build APK** run under the repository's
-[Actions](../../actions) tab (artifact `milarm-debug-apk`), copy it to your phone and open it.
+On your phone, open
+<https://github.com/ramonvidal/milarm/releases/latest/download/Milarm.apk> and install it.
 Allow "install unknown apps" when asked. On first launch, grant the permissions listed on the main
 screen.
+
+## Updates
+
+Every push to `main` publishes a release tagged `v0.<build>`. The app checks the release page
+every 6 hours (when opened) and shows **"Milarm 0.x is available – Update"** at the top of the
+alarm list. **⋮ → Check for updates** checks right away. Tapping **Update** downloads the APK and
+hands it to Android's installer. The first time, Android asks you to allow Milarm to install apps.
+
+### Signing key
+
+Android only installs an update signed with the same key as the installed app, so every
+published build is signed with one fixed key (`milarm-release.keystore`, alias and passwords
+`milarm`). It is never committed: CI writes it from the repository secret
+`SIGNING_KEYSTORE_BASE64` (the keystore file, base64-encoded), and skips publishing a release
+without it. Keep a copy of the keystore somewhere safe: losing it means the next build can't
+update installed copies. To build a signed APK locally, put the keystore in `app/` (it's
+git-ignored).
 
 ## Build
 
@@ -64,5 +81,6 @@ core/   pure Kotlin: Alarm model, next ring time, wake-up check detector, alarm 
 app/    Android app
   alarm/  scheduler, receivers, AlarmService (ringing, band alerts, wake-up check), notifications
   data/   alarm storage
-  ui/     alarm list, alarm editor, ringing screen, permissions
+  update/ release check, download and install of new builds
+  ui/     alarm list, alarm editor, ringing screen, permissions, update banner
 ```
