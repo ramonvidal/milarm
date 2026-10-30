@@ -1,45 +1,68 @@
-# Indews: Xiaomi Smart Band 10 app
+# Milarm
 
-A starter app for the **Xiaomi Smart Band 10**, which runs **Xiaomi Vela**. Vela apps are written
-in JavaScript as `.ux` files (template + script + style) and packaged into a `.rpk` file.
+An Android alarm clock that also buzzes your **Xiaomi Smart Band 10**, with a **wake-up check**
+that rings again if you go back to sleep.
 
-The sample app is a tap counter:
-- tap the orange dial to count up (short vibration)
-- tap **Reset** to clear (long vibration)
-- the count is saved on the band and survives restarts
+## Features
+
+- Alarms with time, repeat days, label and on/off switch
+- Sound modes: **ringtone + vibrate**, **vibrate only**, or **band only** (phone stays silent)
+- Full-screen alarm over the lock screen with **Snooze** and **Dismiss**
+- While ringing, a fresh notification is posted every 30 s. Mi Fitness forwards each one to the
+  band, so your wrist keeps buzzing until you dismiss.
+- **Wake-up check** (per alarm): after you dismiss, the phone watches its motion sensors for
+  *X* minutes (default 5)
+  - Movement found (walking with the phone, using it, unlocking it): done, quietly
+  - No movement: "Are you up?" (buzzes the band); tap **I'm up** within 30 s
+  - No answer: the alarm rings again in full. Repeats up to 3 rounds (configurable).
+- Alarms survive reboots, clock changes and battery saver (`AlarmManager.setAlarmClock`)
+
+## Getting the band to buzz
+
+There is no custom Bluetooth code. The band buzzes through Mi Fitness notification forwarding.
+
+1. In **Mi Fitness → your band → App notifications**, turn on **Milarm**.
+2. Some Mi Fitness versions only forward notifications while the phone screen is off.
+
+## Wake-up check: what counts as movement
+
+Movement is detected **by the phone**, because Mi Fitness does not share live band data.
+It passes when any of these happen after you dismiss:
+
+- 15+ steps (needs the *Physical activity* permission)
+- about 20 s of real motion (rolling over in bed doesn't count)
+- unlocking the phone
+
+If you leave the phone on the nightstand while you walk around, it will ask "Are you up?". One tap
+on the phone settles it.
+
+## Install
+
+Download the APK from the latest **Build APK** run under the repository's
+[Actions](../../actions) tab (artifact `milarm-debug-apk`), copy it to your phone and open it.
+Allow "install unknown apps" when asked. On first launch, grant the permissions listed on the main
+screen.
+
+## Build
+
+Requires JDK 17 and the Android SDK (Android Studio works out of the box).
+
+```bash
+./gradlew test assembleDebug   # APK in app/build/outputs/apk/debug/
+```
+
+The alarm logic lives in the plain-Kotlin `core` module and can be tested without an Android SDK:
+
+```bash
+./gradlew -PcoreOnly=true :core:test
+```
 
 ## Project layout
 
 ```
-src/
-  manifest.json        app id, name, icon, permissions (features), pages
-  app.ux               app lifecycle
-  common/logo.png      app icon
-  pages/index/index.ux the counter screen
+core/   pure Kotlin: Alarm model, next ring time, wake-up check detector, alarm state machine (+ tests)
+app/    Android app
+  alarm/  scheduler, receivers, AlarmService (ringing, band alerts, wake-up check), notifications
+  data/   alarm storage
+  ui/     alarm list, alarm editor, ringing screen, permissions
 ```
-
-The screen is designed for the Band 10's 212 × 520 px display (`designWidth: 212`).
-
-## Build
-
-Requires Node.js 18+.
-
-```bash
-npm install
-npm run build     # debug build   -> dist/com.indews.counter.debug.1.0.0.rpk
-npm run release   # release build -> dist/ (signed with keys in ./sign if present)
-```
-
-## Run on the band
-
-- **Recommended:** open this folder in Xiaomi's [AIoT-IDE](https://iot.mi.com/vela/quickapp/en/tools/)
-  (a VS Code–based IDE). It has a Vela emulator and can install to a real device.
-- **Sideloading the `.rpk`:** Xiaomi has no public app store for third-party Band 10 apps, so `.rpk`
-  files are usually installed with community tools, such as AstroBox. Check that the tool
-  supports the Band 10 before using it.
-
-## Next steps
-
-- Add pages under `src/pages/` and register them in `manifest.json` → `router.pages`.
-- Add the system APIs you use to `manifest.json` → `features` (e.g. `system.sensor`, `system.fetch`).
-- Docs: [Xiaomi Vela JS app framework](https://iot.mi.com/vela/quickapp/en/)

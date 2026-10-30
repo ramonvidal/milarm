@@ -1,5 +1,8 @@
-node_modules/
+.gradle/
+.kotlin/
 build/
-dist/
-sign/
-*.log
+local.properties
+.idea/
+*.iml
+captures/
+.DS_Store
